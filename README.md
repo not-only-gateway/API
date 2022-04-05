@@ -25,12 +25,12 @@ Exporta classe `ApiView`, Essa classe fornece os métodos essenciais para criaç
         - `package`: Pacote JSON/dict para atualização da entidade.
 
 - ***list***: essa função irá fazer as operações de
-  listagem. [API de listagem](https://newgit.aeb.gov.br/sis-aeb/sis-aeb-docs/blob/master/utils/lista.md).
+  listagem.
     - Atributos:
         - `data`: Pacote com filtros, sorts, quantidade e página.
         - `base_query`: Opicional. Array com filtros iniciais.
 
-- ***list_entries***: [API de listagem](https://newgit.aeb.gov.br/sis-aeb/sis-aeb-docs/blob/master/utils/lista.md).
+- ***list_entries***: 
     - Atributos:
     - `fields`: Array de filtros (Ver documentação da API).
     - `sorts`: Array de sorts (Ver documentação da API).
