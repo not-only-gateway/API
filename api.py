@@ -128,7 +128,7 @@ class ApiView:
 
                     self.db.session.commit()
 
-                    new_instance = self.parse_entry(self.instance.query.get(data.get(self.id, None)))
+                    new_instance = self.parse_entry(self.instance.query.get(package.get(self.id, None)))
                     if self.on_data_change is not None:
                         self.on_data_change(new_instance, 'put')
                     return jsonify({'status': 'success', 'description': 'accepted', 'code': 202}), 202
