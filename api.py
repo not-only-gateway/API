@@ -7,14 +7,15 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 class ApiView:
-    def __init__(self, class_instance, identifier_attr, relationships, db, on_data_change=None):
+    def __init__(self, class_instance, identifier_attr, relationships, db, on_data_change=None, on_before_call=None):
         self.instance = class_instance
         self.id = identifier_attr
         self.relationships = relationships
         self.db = db
         self.on_data_change = on_data_change
+        self.on_before_call = on_before_call
 
-    def list_entries(self,  fields, sorts, offset, quantity):
+    def list_entries(self, fields, sorts, offset, quantity):
         queries = []
         applied_sorts = ''
         object_queries = []
@@ -108,15 +109,20 @@ class ApiView:
                 if entity is not None:
                     obj = entity.__dict__
                     obj = {k: v for (k, v) in obj.items()
-                         if k != '_sa_instance_state'}
+                           if k != '_sa_instance_state'}
 
                     data[relation.get('key', None)] = obj
 
         data = {k: v for (k, v) in data.items()
-               if k != '_sa_instance_state'}
+                if k != '_sa_instance_state'}
         return data
 
     def put(self, entity_id, package=None):
+        return_statement = None
+        if self.on_before_call is not None:
+            return_statement = self.on_before_call('put')
+        if return_statement is not None:
+            return return_statement
         if package is not None:
             try:
                 entry = self.instance.query.get(entity_id)
@@ -140,6 +146,11 @@ class ApiView:
             return jsonify({'status': 'error', 'description': 'No data', 'code': 400}), 400
 
     def post(self, package=None):
+        return_statement = None
+        if self.on_before_call is not None:
+            return_statement = self.on_before_call('post')
+        if return_statement is not None:
+            return return_statement
         try:
             entry = self.instance(package)
             if self.on_data_change is not None:
@@ -149,6 +160,11 @@ class ApiView:
             return jsonify({'status': 'error', 'description': str(e), 'code': 400}), 400
 
     def get(self, entity_id):
+        return_statement = None
+        if self.on_before_call is not None:
+            return_statement = self.on_before_call('get')
+        if return_statement is not None:
+            return return_statement
         try:
             entry = self.instance.query.get(entity_id)
             if entry is not None:
@@ -159,6 +175,11 @@ class ApiView:
             return jsonify({'status': 'error', 'description': str(e), 'code': 400}), 400
 
     def delete(self, entity_id):
+        return_statement = None
+        if self.on_before_call is not None:
+            return_statement = self.on_before_call('delete')
+        if return_statement is not None:
+            return return_statement
         try:
             entry = self.instance.query.get(entity_id)
             if entry is not None:
@@ -174,6 +195,11 @@ class ApiView:
             return jsonify({'status': 'error', 'description': str(e), 'code': 400}), 400
 
     def list(self, data, base_query=[]):
+        return_statement = None
+        if self.on_before_call is not None:
+            return_statement = self.on_before_call('list')
+        if return_statement is not None:
+            return return_statement
 
         if data is None:
             data = dict()
