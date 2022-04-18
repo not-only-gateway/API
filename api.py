@@ -7,13 +7,14 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 class ApiView:
-    def __init__(self, class_instance, identifier_attr, relationships, db, on_data_change=None, on_before_call=None):
+    def __init__(self, class_instance, identifier_attr, relationships, db, on_data_change=None, on_before_call=None, on_key_parse=[]):
         self.instance = class_instance
         self.id = identifier_attr
         self.relationships = relationships
         self.db = db
         self.on_data_change = on_data_change
         self.on_before_call = on_before_call
+        self.on_key_parse = on_key_parse
 
     def list_entries(self, fields, sorts, offset, quantity):
         queries = []
@@ -115,9 +116,18 @@ class ApiView:
 
         data = {k: v for (k, v) in data.items()
                 if k != '_sa_instance_state'}
+
+        for key in data.keys():
+            to_parse = next((item for item in self.on_key_parse if item["key"] == key), None)
+
+            if to_parse is not None:
+                try:
+                    data[key] = to_parse['loader'](data=data[key])
+                except (ValueError, OSError) as e:
+                    print(e)
         return data
 
-    def put(self, entity_id, package=None):
+    def put(self, entity_id, package=None, use_self_update=False):
         return_statement = None
         if self.on_before_call is not None:
             return_statement = self.on_before_call('put')
@@ -128,11 +138,14 @@ class ApiView:
                 entry = self.instance.query.get(entity_id)
 
                 if entry is not None:
-                    for i in package:
-                        if hasattr(entry, i) and i != self.id:
-                            setattr(entry, i, package.get(i, None))
+                    if use_self_update:
+                        entry.update(package)
+                    else:
+                        for i in package:
+                            if hasattr(entry, i) and i != self.id:
+                                setattr(entry, i, package.get(i, None))
 
-                    self.db.session.commit()
+                        self.db.session.commit()
 
                     new_instance = self.parse_entry(self.instance.query.get(package.get(self.id, None)))
                     if self.on_data_change is not None:
