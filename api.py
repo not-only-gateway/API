@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 class ApiView:
-    def __init__(self, class_instance, identifier_attr, relationships, db, on_data_change=None, on_before_call=None, on_key_parse=[]):
+    def __init__(self, class_instance, identifier_attr, relationships, db, on_data_change=None, on_before_call=None, on_key_parse=[], keys_to_delete=[]):
         self.instance = class_instance
         self.id = identifier_attr
         self.relationships = relationships
@@ -15,6 +15,7 @@ class ApiView:
         self.on_data_change = on_data_change
         self.on_before_call = on_before_call
         self.on_key_parse = on_key_parse
+        self.keys_to_delete = keys_to_delete
 
     def list_entries(self, fields, sorts, offset, quantity):
         queries = []
@@ -125,6 +126,9 @@ class ApiView:
                     data[key] = to_parse['loader'](data=data[key])
                 except (ValueError, OSError) as e:
                     print(e)
+
+        for k in self.keys_to_delete:
+            data.pop(k, None)
         return data
 
     def put(self, entity_id, package=None, use_self_update=False):
