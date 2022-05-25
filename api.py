@@ -7,7 +7,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 class ApiView:
-    def __init__(self, class_instance, identifier_attr, relationships, db, on_data_change=None, on_before_call=None, on_key_parse=[], keys_to_delete=[]):
+    def __init__(self, class_instance, identifier_attr, relationships, db, on_data_change=None, on_before_call=None,
+                 on_key_parse=[], keys_to_delete=[]):
         self.instance = class_instance
         self.id = identifier_attr
         self.relationships = relationships
@@ -128,7 +129,8 @@ class ApiView:
                     print(e)
 
         for k in self.keys_to_delete:
-            data.pop(k, None)
+            data.pop(k.get('key', None), None)
+            data[k.get('key', None)] = k.get('replacement', None)(data.get(self.id, None))
         return data
 
     def put(self, entity_id, package=None, use_self_update=False):
@@ -140,7 +142,6 @@ class ApiView:
         if package is not None:
             try:
                 entry = self.instance.query.get(entity_id)
-
                 if entry is not None:
                     if use_self_update:
                         entry.update(package)
@@ -150,10 +151,6 @@ class ApiView:
                                 setattr(entry, i, package.get(i, None))
 
                         self.db.session.commit()
-
-                    new_instance = self.parse_entry(self.instance.query.get(package.get(self.id, None)))
-                    if self.on_data_change is not None:
-                        self.on_data_change(new_instance, 'put')
                     return jsonify({'status': 'success', 'description': 'accepted', 'code': 202}), 202
                 else:
                     return jsonify({'status': 'error', 'description': 'not_found', 'code': 404}), 404
@@ -176,14 +173,24 @@ class ApiView:
         except SQLAlchemyError as e:
             return jsonify({'status': 'error', 'description': str(e), 'code': 400}), 400
 
-    def get(self, entity_id):
+    def get(self, entity_id, query=None):
+        if query is None:
+            query = {}
         return_statement = None
         if self.on_before_call is not None:
             return_statement = self.on_before_call('get')
         if return_statement is not None:
             return return_statement
         try:
-            entry = self.instance.query.get(entity_id)
+            queries = []
+            for i in query.keys():
+                queries.append(getattr(self.instance, i) == query[i])
+
+            if len(queries) > 0:
+                entry = self.db.session.query(self.instance).filter(and_(*queries)).first()
+            else:
+                entry = self.instance.query.get(entity_id)
+
             if entry is not None:
                 return jsonify(self.parse_entry(entry)), 200
             else:
