@@ -129,8 +129,9 @@ class ApiView:
                     print(e)
 
         for k in self.keys_to_delete:
-            data.pop(k.get('key', None), None)
-            data[k.get('key', None)] = k.get('replacement', None)(data.get(self.id, None))
+            if data[k.get('key', None)] is not None:
+                data.pop(k.get('key', None), None)
+                data[k.get('key', None)] = k.get('replacement', None)(data.get(self.id, None))
         return data
 
     def put(self, entity_id, package=None, use_self_update=False):
@@ -218,9 +219,9 @@ class ApiView:
         except SQLAlchemyError as e:
             return jsonify({'status': 'error', 'description': str(e), 'code': 400}), 400
 
-    def list(self, data, base_query=[]):
+    def list(self, data, base_query=[], require_call=True):
         return_statement = None
-        if self.on_before_call is not None:
+        if self.on_before_call is not None and require_call is True:
             return_statement = self.on_before_call('list')
         if return_statement is not None:
             return return_statement
