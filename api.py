@@ -7,8 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 
 class ApiView:
-    def __init__(self, class_instance, identifier_attr, relationships, db, on_data_change=None, on_before_call=None,
-                 on_key_parse=[], keys_to_delete=[]):
+    def __init__(self, class_instance, identifier_attr, relationships, db, on_data_change=None, on_before_call=None, on_key_parse=[], keys_to_delete=[], on_parse=None):
         self.instance = class_instance
         self.id = identifier_attr
         self.relationships = relationships
@@ -17,6 +16,7 @@ class ApiView:
         self.on_before_call = on_before_call
         self.on_key_parse = on_key_parse
         self.keys_to_delete = keys_to_delete
+        self.on_parse = on_parse
 
     def list_entries(self, fields, sorts, offset, quantity):
         queries = []
@@ -105,7 +105,6 @@ class ApiView:
             relation = self.__find_relationship(i)
 
             if relation is not None and relation.get('instance', None) is not None:
-
                 # try:
                 entity = self.db.session.get(relation.get('instance', None), data[relation.get('key', None)])
 
@@ -129,9 +128,11 @@ class ApiView:
                     print(e)
 
         for k in self.keys_to_delete:
-            if data[k.get('key', None)] is not None:
+            if data.get(k.get('key', None), None) is not None:
                 data.pop(k.get('key', None), None)
                 data[k.get('key', None)] = k.get('replacement', None)(data.get(self.id, None))
+        if self.on_parse is not None:
+            self.on_parse(data)
         return data
 
     def put(self, entity_id, package=None, use_self_update=False):
